@@ -1,0 +1,141 @@
+---
+title: "merge"
+author: "Kay Bao"
+date: "2024-05-11"
+output: html_document
+---
+
+```{r}
+library(plyr)
+library(readxl)
+library(dplyr)
+library(openxlsx)
+```
+
+```{r import data}
+dir_name <- "/Users/kay/Downloads/labor_source"
+
+df_13 <- read_excel(file.path(dir_name, "yearaly_data/13/df_13.xlsx"), sheet = 1)
+df_14 <- read_excel(file.path(dir_name, "yearaly_data/14/df_14.xlsx"), sheet = 1)
+df_15 <- read_excel(file.path(dir_name, "yearaly_data/15/df_15.xlsx"), sheet = 1)
+df_16 <- read_excel(file.path(dir_name, "yearaly_data/16/df_16.xlsx"), sheet = 1)
+df_17 <- read_excel(file.path(dir_name, "yearaly_data/17/df_17.xlsx"), sheet = 1)
+df_18 <- read_excel(file.path(dir_name, "yearaly_data/18/df_18.xlsx"), sheet = 1)
+```
+## Find common shared schools 
+
+```{r}
+common_schools <- intersect(df_13[,c("RCDTS", "SCHOOL NAME")], df_14[,c("RCDTS", "SCHOOL NAME")])
+common_schools <- intersect(common_schools, df_15[,c("RCDTS", "SCHOOL NAME")])
+common_schools <- intersect(common_schools, df_16[,c("RCDTS", "SCHOOL NAME")])
+common_schools <- intersect(common_schools, df_17[,c("RCDTS", "SCHOOL NAME")])
+common_schools <- intersect(common_schools, df_18[,c("RCDTS", "SCHOOL NAME")])
+
+```
+
+## Filter each df to only contain common schools
+
+```{r}
+df_13 = semi_join(df_13, common_schools, by = c("RCDTS", "SCHOOL NAME"))
+df_14 = semi_join(df_14, common_schools, by = c("RCDTS", "SCHOOL NAME"))
+df_15 = semi_join(df_15, common_schools, by = c("RCDTS", "SCHOOL NAME"))
+df_16 = semi_join(df_16, common_schools, by = c("RCDTS", "SCHOOL NAME"))
+df_17 = semi_join(df_17, common_schools, by = c("RCDTS", "SCHOOL NAME"))
+df_18 = semi_join(df_18, common_schools, by = c("RCDTS", "SCHOOL NAME"))
+
+```
+
+## Combine to long data
+```{r merge}
+df = bind_rows(df_13, df_14, df_15, df_16, df_17, df_18)
+head(df)
+
+# 13 institution rate
+# 18 ACT
+# 13 14 participation
+```
+## Imputation
+```{r}
+# impute participation rate for 2013-14 data
+# columns to impute
+columns_to_impute <- seq(28,62)[seq(28,62) %% 2 == 0]
+for (i in columns_to_impute) {
+    df[df$year == 2014, i] <- (df[df$year == 2015, i] + df[df$year == 2016, i]) / 2
+    df[df$year == 2013, i] <- (df[df$year == 2015, i] + df[df$year == 2014, i]) / 2
+    df[df$year == 2014, i+1] <- ifelse(df[df$year == 2014, i] > 95, "Yes", "No")
+    df[df$year == 2013, i+1] <- ifelse(df[df$year == 2013, i] > 95, "Yes", "No") 
+}+
+
+# impute graduation college within 16 mths
+df[df$year == 2013, 26] <- (df[df$year == 2015, 26] + df[df$year == 2014, 26]) / 2
+
+# impute graduation college within 12 mths
+df[df$year == 2013, 27] <- (df[df$year == 2015, 27] + df[df$year == 2014, 27]) / 2
+
+# impute ACT score
+df[df$year == 2018, 64] <- (df[df$year == 2016, 64] + df[df$year == 2017, 64]) / 2
+
+# fix ACT score
+#df['ACT Score'] = ifelse(is.na(df['ACT Score']), df['ACT_SCORE'], df['ACT Score'])
+df$`ACT Score`[is.na(df$`ACT Score`)] <- df$ACT_SCORE[is.na(df$`ACT Score`)]
+
+# fix exceeds math
+#df['ACT Score'] = ifelse(is.na(df['ACT Score']), df['ACT_SCORE'], df['ACT Score'])
+df$PARCC_Math_Exceeds[is.na(df$`PARCC_Math_Exceeds`)] <- df$PARCC_MATH_Exceeds[is.na(df$`PARCC_Math_Exceeds`)]
+
+df$PARCC_Math_Exceeds[is.na(df$`PARCC_Math_Exceeds`)] <- df$`PARCC_MATH]_Exceeds`[is.na(df$`PARCC_Math_Exceeds`)]
+
+# remove column ACT_SCORE
+df <- df[, -which(names(df) %in% c("ACT_SCORE", "PARCC_MATH]_Exceeds", "PARCC_MATH_Exceeds"))]
+
+```
+
+
+## Cleaning
+```{r}
+# impute
+for (col in names(df)) {
+  # If column contains character values
+  if (is.character(df[[col]])) {
+    df[[col]][is.na(df[[col]])] <- "Not Applicable"
+  }
+  # If column contains numeric values
+  if (is.numeric(df[[col]])) {
+    df[[col]][is.na(df[[col]])] <- 0
+  }
+}
+# check NAs
+colSums(is.na(df))
+```
+# Summary 
+```{r}
+summary(df)
+```
+```{r}
+for (col in names(df)) {
+  if (is.numeric(df[[col]])) {
+    hist(df[[col]], main = paste("Histogram of", col), xlab = col, col = "skyblue")
+  }
+}
+```
+```{r}
+#df[df$`AVG CLASS SIZE - SCHOOL (H.S.)` == 0,]
+```
+## According to the plots, remove native hawaii and American Indian because all values are 0/lost, or for the latter there's only 1 row left, it's too sparse.
+```{r}
+df <- df[, -which(names(df) %in% c("American Indian - Math_Participation_PACRR", 
+                                   "American Indian - ELA_Participation_PACRR",
+                                   "American Indian - ELA_Participation_Over_95",
+                                   "American Indian - Math_Participation_Over_95",
+                                   "Native Hawaiian/Pacific Islander - ELA_Participation_PACRR",
+                                   "Native Hawaiian/Pacific Islander - Math_Participation_PACRR",
+                                   "Native Hawaiian/Pacific Islander - ELA_Participation_Over_95",
+                                   "Native Hawaiian/Pacific Islander - Math_Participation_Over_95"))]
+
+```
+
+## Write out data for regression analysis
+```{r write out}
+write.xlsx(df, file.path(dir_name, "regression/reports.xlsx"), rowNames = FALSE)
+
+```

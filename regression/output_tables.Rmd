@@ -1,0 +1,210 @@
+---
+title: "des"
+author: "Kay Bao"
+date: "2024-05-17"
+output: html_document
+---
+```{r set up}
+#install.packages('MatchIt')
+#install.packages("optmatch")
+library(MatchIt)
+library(stargazer)
+library(plyr)
+library(readxl)
+library(dplyr)
+library(openxlsx)
+library(optmatch)
+```
+
+
+```{r create des, include=FALSE}
+dir_name <- "/Users/kay/Downloads/labor_source/regression"
+df <- read_excel(file.path(dir_name, "complete_reports.xlsx"), sheet = 1)
+
+```
+
+```{r}
+m.out <- matchit(treated ~ `SCHOOL - WHITE %` + `SCHOOL - BLACK %` + `SCHOOL - HISPANIC %` + `SCHOOL - ASIAN %` + `SCHOOL - NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER %` + `SCHOOL - NATIVE AMERICAN %` + `SCHOOL - TWO OR MORE RACES %` + `LOW-INCOME SCHOOL %` + `GRADES IN SCHOOL` + `AVG CLASS SIZE - SCHOOL (H.S.)` + `BLACK_SCHOOL` + `HISPANIC_SCHOOL` + `LOW_INCOME_SCHOOL`, data = df,
+                 method = "full")
+m.out
+```
+
+```{r}
+summary(m.out, un = FALSE)
+```
+
+
+
+```{r}
+plot(m.out, type = "density", which.xs = ~`SCHOOL - ASIAN %` + `SCHOOL - NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER %` + `SCHOOL - NATIVE AMERICAN %` + `SCHOOL - TWO OR MORE RACES %`)
+```
+
+```{r}
+png(file.path(dir_name, "/img/plot.png"), width = 1000, height = 800) 
+plot(summary(m.out), abs = FALSE, main="Balance between Control Group and Treated Group", sub="Before and After Matching")
+
+```
+
+
+```{r}
+m.data <- match.data(m.out)
+colnames(m.data)
+```
+
+## Perform regression
+Control for class size, grades served, black proportion, hispanic proportion, income level
+```{r}
+# grad in 12 months
+reg_grad_12_1 <- lm(`% GRADUATES ENROLLED IN COLLEGE WITHIN 12 MONTHS - SCHOOL` ~ `AVG CLASS SIZE - SCHOOL (H.S.)` + `GRADES IN SCHOOL` + BLACK_SCHOOL + HISPANIC_SCHOOL + LOW_INCOME_SCHOOL + `SCHOOL NAME`+ year - 1, data=m.data, weights = m.data$weights)
+
+# grad in 16 months
+reg_grad_16_1 <- lm(`% GRADUATES ENROLLED IN COLLEGE WITHIN 16 MONTHS - SCHOOL` ~ `AVG CLASS SIZE - SCHOOL (H.S.)` + `GRADES IN SCHOOL` + BLACK_SCHOOL + HISPANIC_SCHOOL + LOW_INCOME_SCHOOL + `SCHOOL NAME`+ year - 1, data=m.data, weights = m.data$weights)
+
+# grad in 12 months
+reg_grad_12_2 <- lm(`% GRADUATES ENROLLED IN COLLEGE WITHIN 12 MONTHS - SCHOOL` ~ treated*post + treated + post + `AVG CLASS SIZE - SCHOOL (H.S.)` + `GRADES IN SCHOOL` + BLACK_SCHOOL + HISPANIC_SCHOOL + LOW_INCOME_SCHOOL + `SCHOOL NAME`+ year - 1, data=m.data, weights = m.data$weights)
+
+# grad in 16 months
+reg_grad_16_2 <- lm(`% GRADUATES ENROLLED IN COLLEGE WITHIN 16 MONTHS - SCHOOL` ~ treated*post + treated + post + `AVG CLASS SIZE - SCHOOL (H.S.)` + `GRADES IN SCHOOL` + BLACK_SCHOOL + HISPANIC_SCHOOL + LOW_INCOME_SCHOOL + `SCHOOL NAME`+ year - 1, data=m.data, weights = m.data$weights)
+```
+
+
+```{r}
+stargazer(reg_grad_12_1, 
+          reg_grad_16_1, 
+          reg_grad_12_2, 
+          reg_grad_16_2,
+          # reg_act_1,
+          # reg_act_2,
+          type = "text",
+          dep.var.labels.include = FALSE,
+          title = "Main Results - College Enrollments",
+          dep.var.caption  = '',
+          column.labels = c("Enrolled College < 12mths", "Enrolled College < 16mths",
+                            "Enrolled College < 12mths", "Enrolled College < 16mths"),
+          covariate.labels = c("Treated",
+                               "Post-reform",
+                               "Average Class Size",
+                               "High Proportion of Black Students",
+                               "High Proportion of Hispanic Students",
+                               "High Proportion of Low Income",
+                               "Treated Post-Reform",
+                               "Constant"),
+                               
+          omit = c("GRADES IN SCHOOL", "year", "SCHOOL NAME"),
+          notes        = "Column (1) and (2) indicate the result for College Enrollment Rate without including treatment, post, and intersection. Column (3) and (4) indicate the result for College Enrollment Rate with including treatment, post, and intersection.",
+          notes.align = "l",
+          out = file.path(dir_name, "/img/col_enroll.html"))
+```
+
+```{r}
+# ela participation
+reg_ela_par_1 <- lm(`All - ELA_Participation_PACRR` ~ `AVG CLASS SIZE - SCHOOL (H.S.)` + `GRADES IN SCHOOL` + BLACK_SCHOOL + HISPANIC_SCHOOL + LOW_INCOME_SCHOOL + `SCHOOL NAME`+ year - 1, data=m.data, weights = m.data$weights)
+
+# Math participation
+reg_m_par_1 <- lm(`All - Math_Participation_PACRR` ~ `AVG CLASS SIZE - SCHOOL (H.S.)` + `GRADES IN SCHOOL` + BLACK_SCHOOL + HISPANIC_SCHOOL + LOW_INCOME_SCHOOL + `SCHOOL NAME`+ year - 1, data=m.data, weights = m.data$weights)
+
+reg_ela_par_2 <- lm(`All - ELA_Participation_PACRR` ~ treated*post + treated + post + `AVG CLASS SIZE - SCHOOL (H.S.)` + `GRADES IN SCHOOL` + BLACK_SCHOOL + HISPANIC_SCHOOL + LOW_INCOME_SCHOOL + `SCHOOL NAME`+ year - 1, data=m.data, weights = m.data$weights)
+
+# Math participation
+reg_m_par_2 <- lm(`All - Math_Participation_PACRR` ~ treated*post + treated + post + `AVG CLASS SIZE - SCHOOL (H.S.)` + `GRADES IN SCHOOL` + BLACK_SCHOOL + HISPANIC_SCHOOL + LOW_INCOME_SCHOOL + `SCHOOL NAME`+ year - 1, data=m.data, weights = m.data$weights)
+```
+
+```{r}
+stargazer(
+          reg_ela_par_1,
+          reg_m_par_1,
+          reg_ela_par_2,
+          reg_m_par_2,
+
+          type = "text",
+          dep.var.labels.include = FALSE,
+          title = "Main Results - ELA and Math Participation Rate",
+          dep.var.caption  = '',
+          column.labels = c("ELA", "Math", "ELA", "Math"),
+          covariate.labels = c("Treated",
+                               "Post-reform",
+                               "Average Class Size",
+                               "High Proportion of Black Students",
+                               "High Proportion of Hispanic Students",
+                               "High Proportion of Low Income",
+                               "Treated Post-Reform",
+                               "Constant"),
+          # 
+          notes        = "Column (1) and (2) indicate the result for ELA and Math exam without including treatment, post, and intersection. Column (3) and (4) indicate the result for ELA and Math exam with including treatment, post, and intersection.",
+          notes.align = "l",          
+          omit = c("GRADES IN SCHOOL", "year", "SCHOOL NAME"),
+          out = file.path(dir_name, "img/part.html"))
+
+```
+
+```{r}
+# ELA exceeds reqruiments
+reg_ela_exceeds_1 <- lm(`PARCC_ELA_Exceeds` ~ `AVG CLASS SIZE - SCHOOL (H.S.)` + `GRADES IN SCHOOL` + BLACK_SCHOOL + HISPANIC_SCHOOL + LOW_INCOME_SCHOOL + `SCHOOL NAME`+ year - 1, data=m.data, weights = m.data$weights)
+
+# ELA exceeds reqruiments
+reg_m_exceeds_1 <- lm(`PARCC_Math_Exceeds` ~ `AVG CLASS SIZE - SCHOOL (H.S.)` + `GRADES IN SCHOOL` + BLACK_SCHOOL + HISPANIC_SCHOOL + LOW_INCOME_SCHOOL + `SCHOOL NAME`+ year - 1, data=m.data, weights = m.data$weights)
+
+# act
+reg_act_1 <- lm(`ACT Score` ~ `AVG CLASS SIZE - SCHOOL (H.S.)` + `GRADES IN SCHOOL` + BLACK_SCHOOL + HISPANIC_SCHOOL + LOW_INCOME_SCHOOL, index = c("SCHOOL NAME", "year"), data=m.data, weights = m.data$weights)
+
+# ELA exceeds reqruiments
+reg_ela_exceeds_2 <- lm(`PARCC_ELA_Exceeds` ~ treated*post + treated + post + `AVG CLASS SIZE - SCHOOL (H.S.)` + `GRADES IN SCHOOL` + BLACK_SCHOOL + HISPANIC_SCHOOL + LOW_INCOME_SCHOOL + `SCHOOL NAME`+ year - 1, data=m.data, weights = m.data$weights)
+
+# ELA exceeds reqruiments
+reg_m_exceeds_2 <- lm(`PARCC_Math_Exceeds` ~ treated*post + treated + post + `AVG CLASS SIZE - SCHOOL (H.S.)` + `GRADES IN SCHOOL` + BLACK_SCHOOL + HISPANIC_SCHOOL + LOW_INCOME_SCHOOL + `SCHOOL NAME`+ year - 1,  data=m.data, weights = m.data$weights)
+
+# act
+reg_act_2 <- lm(`ACT Score` ~ treated*post + treated + post + `AVG CLASS SIZE - SCHOOL (H.S.)` + `GRADES IN SCHOOL` + BLACK_SCHOOL + HISPANIC_SCHOOL + LOW_INCOME_SCHOOL + `SCHOOL NAME`+ year - 1, data=m.data, weights = m.data$weights)
+
+```
+
+
+```{r}
+stargazer(
+          reg_ela_exceeds_1,
+          reg_m_exceeds_1,
+          reg_ela_exceeds_2,
+          reg_m_exceeds_2,
+          type = "text",
+          dep.var.labels.include = FALSE,
+          title = "Main Results - ELA and Math Meeting/Exceeding Expectation",
+          dep.var.caption  = '',
+          column.labels = c("ELA", "Math", "ELA", "Math"),
+          covariate.labels = c("Treated",
+                               "Post-reform",
+                               "Average Class Size",
+                               "High Proportion of Black Students",
+                               "High Proportion of Hispanic Students",
+                               "High Proportion of Low Income",
+                               "Treated Post-Reform",
+                               "Constant"),
+          # 
+          notes        = "Column (1) and (2) indicate the result for ELA and Math exam without including treatment, post, and intersection. Column (3) and (4) indicate the result for ELA and Math exam with including treatment, post, and intersection.",
+          notes.align = "l",            
+          omit = c("GRADES IN SCHOOL", "year", "SCHOOL NAME"),
+          out = file.path(dir_name, "img/exceed.html"))
+```
+
+```{r}
+stargazer(
+          reg_act_1,
+          reg_act_2,
+          type = "text",
+          dep.var.labels.include = FALSE,
+          title = "Main Results - ACT Score",
+          dep.var.caption  = 'ACT Score',
+          # column.labels = c("ACT Score"
+          #                   ),
+          covariate.labels = c("Treated",
+                               "Post-reform",
+                               "Average Class Size",
+                               "High Proportion of Black Students",
+                               "High Proportion of Hispanic Students",
+                               "High Proportion of Low Income",
+                               "Treated Post-Reform",
+                               "Constant"),
+          notes        = "Column (1) indicate the result for ACT score without including treatment, post, and intersection. Column (2) indicate the result for ACT score with including treatment, post, and intersection.",
+          notes.align = "l",                               
+          omit = c("GRADES IN SCHOOL", "year", "SCHOOL NAME"),
+          out = out = file.path(dir_name, "img/act.html"))
+```

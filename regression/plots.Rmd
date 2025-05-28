@@ -1,0 +1,333 @@
+---
+title: "regression"
+author: "Kay Bao"
+date: "2024-05-11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+#install.packages("ggpubr")
+
+library(plyr)
+library(readxl)
+library(dplyr)
+library(openxlsx)
+library(ggplot2)
+library(stargazer)
+library(ggthemes)
+library(ggpubr)
+```
+
+# read in
+```{r}
+dir_name <- "/Users/kay/Downloads/labor_source"
+df <- read_excel(file.path(dir_name, "regression/reports.xlsx"), sheet = 1)
+head(df)
+```
+
+## Plot common trend
+
+```{r}
+target_var <- c(`PARCC_ELA_Exceeds`,
+                `PARCC_Math_Exceeds`,
+                `ACT Score`,
+                `% GRADUATES ENROLLED IN COLLEGE WITHIN 16 MONTHS - SCHOOL`,
+                `% GRADUATES ENROLLED IN COLLEGE WITHIN 12 MONTHS - SCHOOL`,
+                `All - ELA_Participation_PACRR`,
+                `All - Math_Participation_PACRR`
+                )
+```
+
+```{r create the table needed,  message=FALSE}
+df_mean <- 
+  df %>% 
+  filter(post == 0) %>%
+  select(year, treated, PARCC_ELA_Exceeds) %>%
+  group_by(year, treated) %>%
+  summarise(mean = mean(PARCC_ELA_Exceeds)) 
+
+df_mean
+
+
+```
+
+
+
+```{r graph}
+p1 <- ggplot(df_mean, aes(factor(year), mean, group=factor(treated), color=factor(treated))) +
+  geom_point() +
+  geom_line(size=2.5) +
+  theme_hc() +
+  labs(title = "Mean Proportion of Schools Meeting or 
+Exceeding ELA Expectation",
+       subtitle = "2013-2015, Pre-reform",
+       x = "Year",
+       y = "Mean Proportion (%)",
+       color = "Group") +
+  scale_color_manual(labels = c("Control group", "Treatment group"), values = c("cyan3", "indianred")) +
+  theme(axis.text.x = element_text(size = 10),
+        axis.text.y = element_text(size = 10),
+        axis.title.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12),
+        plot.title = element_text(size = 24, face = "bold", color = "black"),
+        plot.subtitle = element_text(size = 11, face = "bold", color = "black"),
+        legend.position="bottom",
+        legend.title=element_text(size=10),
+        legend.text=element_text(size=18))
+
+p1
+```
+```{r create the table needed,  message=FALSE}
+df_mean <- 
+  df %>% 
+  filter(post == 0) %>%
+  select(year, treated, PARCC_Math_Exceeds) %>%
+  group_by(year, treated) %>%
+  summarise(mean = mean(PARCC_Math_Exceeds)) 
+
+df_mean
+
+
+```
+
+
+
+```{r graph}
+p2 <- ggplot(df_mean, aes(factor(year), mean, group=factor(treated), color=factor(treated))) +
+  geom_point() +
+  geom_line(size=2.5) +
+  theme_hc() +
+  labs(title = "Mean Proportion of Schools Meeting or 
+  Exceeding Math Exam Expectation",
+       subtitle = "2013-2015, Pre-reform",
+       x = "Year",
+       y = "Mean Proportion (%)",
+       color = "Group") +
+  scale_color_manual(labels = c("Control group", "Treatment group"), values = c("cyan3", "indianred")) +
+  theme(axis.text.x = element_text(size = 10),
+        axis.text.y = element_text(size = 10),
+        axis.title.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12),
+        plot.title = element_text(size = 24, face = "bold", color = "black"),
+        plot.subtitle = element_text(size = 11, face = "bold", color = "black"),
+        legend.position="bottom",
+        legend.title=element_text(size=10),
+        legend.text=element_text(size=18))
+
+p2
+```
+
+```{r create the table needed,  message=FALSE}
+df_mean <- 
+  df %>% 
+  filter(post == 0) %>%
+  select(year, treated, `ACT Score`) %>%
+  group_by(year, treated) %>%
+  summarise(mean = mean(`ACT Score`)) 
+
+df_mean
+
+
+```
+
+
+```{r graph}
+p3 <- ggplot(df_mean, aes(factor(year), mean, group=factor(treated), color=factor(treated))) +
+  geom_point() +
+  geom_line(size=2.5) +
+  theme_hc() +
+  labs(title = "Trend of ACT Score (Out of 36)",
+       subtitle = "2013-2015, Pre-reform",
+       x = "Year",
+       y = "Score",
+       color = "Group") +
+  scale_color_manual(labels = c("Control group", "Treatment group"), values = c("cyan3", "indianred")) +
+  theme(axis.text.x = element_text(size = 10),
+        axis.text.y = element_text(size = 10),
+        axis.title.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12),
+        plot.title = element_text(size = 24, face = "bold", color = "black"),
+        plot.subtitle = element_text(size = 11, face = "bold", color = "black"),
+        legend.position="bottom",
+        legend.title=element_text(size=10),
+        legend.text=element_text(size=18))
+
+p3
+```
+```{r create the table needed,  message=FALSE}
+df_mean <- 
+  df %>% 
+  filter(post == 0) %>%
+  select(year, treated, `% GRADUATES ENROLLED IN COLLEGE WITHIN 16 MONTHS - SCHOOL`) %>%
+  group_by(year, treated) %>%
+  summarise(mean = mean(`% GRADUATES ENROLLED IN COLLEGE WITHIN 16 MONTHS - SCHOOL`)) 
+
+df_mean
+
+
+```
+
+
+
+```{r graph}
+p4 <- ggplot(df_mean, aes(factor(year), mean, group=factor(treated), color=factor(treated))) +
+  geom_point() +
+  geom_line(size=2.5) +
+  theme_hc() +
+  labs(title = "Trend of Proportion of Graduates Enrolled 
+in College within 16 Months",
+       subtitle = "2013-2015, Pre-reform",
+       x = "Year",
+       y = "Mean Proportion (%)",
+       color = "Group") +
+  scale_color_manual(labels = c("Control group", "Treatment group"), values = c("cyan3", "indianred")) +
+  theme(axis.text.x = element_text(size = 10),
+        axis.text.y = element_text(size = 10),
+        axis.title.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12),
+        plot.title = element_text(size = 24, face = "bold", color = "black"),
+        plot.subtitle = element_text(size = 11, face = "bold", color = "black"),
+        legend.position="bottom",
+        legend.title=element_text(size=10),
+        legend.text=element_text(size=18))
+
+p4
+```
+
+```{r create the table needed,  message=FALSE}
+df_mean <- 
+  df %>% 
+  filter(post == 0) %>%
+  select(year, treated, `% GRADUATES ENROLLED IN COLLEGE WITHIN 12 MONTHS - SCHOOL`) %>%
+  group_by(year, treated) %>%
+  summarise(mean = mean(`% GRADUATES ENROLLED IN COLLEGE WITHIN 12 MONTHS - SCHOOL`)) 
+
+df_mean
+
+
+```
+
+
+
+```{r graph}
+p5 <- ggplot(df_mean, aes(factor(year), mean, group=factor(treated), color=factor(treated))) +
+  geom_point() +
+  geom_line(size=2.5) +
+  theme_hc() +
+  labs(title = "Trend of Proportion of Graduates Enrolled
+  in College within 12 Months",
+       subtitle = "2013-2015, Pre-reform",
+       x = "Year",
+       y = "Mean Proportion (%)",
+       color = "Group") +
+  scale_color_manual(labels = c("Control group", "Treatment group"), values = c("cyan3", "indianred")) +
+  theme(axis.text.x = element_text(size = 10),
+        axis.text.y = element_text(size = 10),
+        axis.title.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12),
+        plot.title = element_text(size = 24, face = "bold", color = "black"),
+        plot.subtitle = element_text(size = 11, face = "bold", color = "black"),
+        legend.position="bottom",
+        legend.title=element_text(size=10),
+        legend.text=element_text(size=18))
+
+p5
+
+```
+
+```{r create the table needed,  message=FALSE}
+df_mean <- 
+  df %>% 
+  filter(post == 0) %>%
+  select(year, treated, `All - ELA_Participation_PACRR`) %>%
+  group_by(year, treated) %>%
+  summarise(mean = mean(`All - ELA_Participation_PACRR`)) 
+
+df_mean
+
+
+```
+
+
+
+```{r graph}
+p6 <- ggplot(df_mean, aes(factor(year), mean, group=factor(treated), color=factor(treated))) +
+  geom_point() +
+  geom_line(size=2.5) +
+  theme_hc() +
+  labs(title = "Trend of ELA Exam Participation Rate",
+       subtitle = "2013-2015, Pre-reform",
+       x = "Year",
+       y = "Participation Rate (%)",
+       color = "Group") +
+  scale_color_manual(labels = c("Control group", "Treatment group"), values = c("cyan3", "indianred")) +
+  theme(axis.text.x = element_text(size = 10),
+        axis.text.y = element_text(size = 10),
+        axis.title.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12),
+        plot.title = element_text(size = 24, face = "bold", color = "black"),
+        plot.subtitle = element_text(size = 11, face = "bold", color = "black"),
+        legend.position="bottom",
+        legend.title=element_text(size=10),
+        legend.text=element_text(size=18))
+
+p6
+
+```
+```{r create the table needed,  message=FALSE}
+df_mean <- 
+  df %>% 
+  filter(post == 0) %>%
+  select(year, treated, `All - Math_Participation_PACRR`) %>%
+  group_by(year, treated) %>%
+  summarise(mean = mean(`All - Math_Participation_PACRR`)) 
+
+df_mean
+
+
+```
+
+
+
+```{r graph}
+p7 <- ggplot(df_mean, aes(factor(year), mean, group=factor(treated), color=factor(treated))) +
+  geom_point() +
+  geom_line(size=2.5) +
+  theme_hc() +
+  labs(title = "Trend of Math Exam Participation Rate",
+       subtitle = "2013-2015, Pre-reform",
+       x = "Year",
+       y = "Participation Rate (%)",
+       color = "Group") +
+  scale_color_manual(labels = c("Control group", "Treatment group"), values = c("cyan3", "indianred")) +
+  theme(axis.text.x = element_text(size = 10),
+        axis.text.y = element_text(size = 10),
+        axis.title.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12),
+        plot.title = element_text(size = 24, face = "bold", color = "black"),
+        plot.subtitle = element_text(size = 11, face = "bold", color = "black"),
+        legend.position="bottom",
+        legend.title=element_text(size=10),
+        legend.text=element_text(size=18))
+
+p7
+
+```
+```{r}
+arranged_plot <- ggarrange(p1, p2, p4, p5, p6, p7, p3,
+          ncol = 2, nrow = 4)
+
+ggsave(file.path(dir_name, "regression/img/complex_arranged_plot.png"), arranged_plot, width = 22, height = 24)
+```
+
+
+```{r}
+ggsave(file.path(dir_name, "regression/img/exceeding_ela.png"), plot = p1)
+ggsave(file.path(dir_name, "regression/img/exceeding_math.png"), plot = p2)
+ggsave(file.path(dir_name, "regression/img/act.png"), plot = p3)
+ggsave(file.path(dir_name, "regression/img/12month.png"), plot = p4)
+ggsave(file.path(dir_name, "regression/img/16month.png"), plot = p5)
+ggsave(file.path(dir_name, "regression/img/ela_part.png"), plot = p6)
+ggsave(file.path(dir_name, "regression/img/math_part.png"), plot = p7)
+```
+

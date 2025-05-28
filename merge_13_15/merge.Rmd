@@ -1,0 +1,71 @@
+---
+title: "merge"
+author: "Kay Bao"
+date: "2024-05-11"
+output: html_document
+---
+
+```{r}
+library(plyr)
+library(readxl)
+library(dplyr)
+library(openxlsx)
+```
+
+```{r import data}
+dir_name <- "/Users/kay/Downloads/labor_source"
+
+df_13 <- read_excel(file.path(dir_name, "yearaly_data/13/df_13.xlsx"), sheet = 1)
+df_14 <- read_excel(file.path(dir_name, "yearaly_data/14/df_14.xlsx"), sheet = 1)
+df_15 <- read_excel(file.path(dir_name, "yearaly_data/15/df_15.xlsx"), sheet = 1)
+
+```
+## Generate treated group
+```{r slice data}
+df_13_treat <- df_13 %>%
+  filter(treat == 1) %>%
+  select(RCDTS, `SCHOOL NAME`)
+
+df_14_treat <- df_14 %>%
+  filter(treat == 1) %>%
+  select(RCDTS, `SCHOOL NAME`)
+
+df_15_treat <- df_15 %>%
+  filter(treat == 1) %>%
+  select(RCDTS, `SCHOOL NAME`)
+```
+
+
+```{r merge}
+df_inter <- merge(df_15_treat, df_14_treat, by = c("RCDTS", "SCHOOL NAME"), all = FALSE)
+# merge test data and population data
+treat_schools <- merge(df_13_treat, df_inter, by = c("RCDTS", "SCHOOL NAME"), all = FALSE)
+
+rm(df_inter)
+```
+
+## Mark final treatment schools
+```{r}
+# search back the pre files, marked schools that has 3 consecutive treated records as final treatment group
+df_13$treated <- sapply(df_13$RCDTS, function(x) {
+  ifelse(any(x %in% treat_schools$RCDTS), 1, 0)
+})
+
+df_14$treated <- sapply(df_14$RCDTS, function(x) {
+  ifelse(any(x %in% treat_schools$RCDTS), 1, 0)
+})
+
+df_15$treated <- sapply(df_15$RCDTS, function(x) {
+  ifelse(any(x %in% treat_schools$RCDTS), 1, 0)
+})
+
+```
+
+```{r write out}
+# write out treatment group to filter later schools 
+write.xlsx(treat_schools, file.path(dir_name, "merge_13_15/treated.xlsx"), rowNames = FALSE)
+# write out pre-treatment year file to be merged in future
+write.xlsx(df_13, file.path(dir_name, "yearaly_data/13/df_13.xlsx"), rowNames = FALSE)
+write.xlsx(df_14, file.path(dir_name, "yearaly_data/14/df_14.xlsx"), rowNames = FALSE)
+write.xlsx(df_15, file.path(dir_name, "yearaly_data/15/df_15.xlsx"), rowNames = FALSE)
+```

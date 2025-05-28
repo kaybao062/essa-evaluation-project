@@ -1,0 +1,70 @@
+---
+title: "reg"
+author: "Kay Bao"
+date: "2024-05-11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(plyr)
+library(readxl)
+library(dplyr)
+library(openxlsx)
+library(stargazer)
+```
+
+# read in
+```{r}
+dir_name <- "/Users/kay/Downloads/labor_source"
+df <- read_excel(file.path(dir_name, "regression/reports.xlsx"), sheet = 1)
+head(df)
+```
+
+```{r}
+colnames(df)
+
+```
+
+
+# desciptive
+```{r}
+#table_treat <- stargazer(as.data.frame(df[df$treated ==1, ]), title = "Descriptive Statistics", type = "text", digits=1)
+
+table_control <- stargazer(as.data.frame(df[df$treated ==0, ]), 
+                           #summary.stat = c("n", "mean", "sd"), 
+                           summary.logical = FALSE,
+                           title = "Descriptive Statistics", 
+                           type = "text", 
+                           digits=1)
+
+# paste(table_treat, table_control)
+
+```
+
+```{r}
+unique(df$`GRADES IN SCHOOL`)
+```
+
+# Regression
+## Generate new variables
+```{r}
+df$BLACK_SCHOOL <- ifelse(df$`SCHOOL - BLACK %` > 50, 1, 0) # black school or not
+df$HISPANIC_SCHOOL <- ifelse(df$`SCHOOL - HISPANIC %` > 50, 1, 0) # hispanic school or not
+df$LOW_INCOME_SCHOOL <- ifelse(df$`LOW-INCOME SCHOOL %` > 50, 1, 0) # low income major schools
+
+head(df)
+```
+
+```{r}
+hist(df$BLACK_SCHOOL, col = "skyblue")
+hist(df$HISPANIC_SCHOOL, col = "skyblue")
+hist(df$LOW_INCOME_SCHOOL, col = "skyblue")
+```
+
+
+```{r}
+# write out the data set
+write.xlsx(df, file.path(dir_name, "regression/complete_reports.xlsx"), rowNames = FALSE)
+
+```
+
